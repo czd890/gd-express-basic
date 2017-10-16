@@ -1,8 +1,10 @@
+import { UserInfo } from './UserInfo';
 import * as core from "express-serve-static-core";
 import { ViewResult } from './ViewResult';
 import { GetActionDescriptor, SetActionDescriptor } from './RouteFactory';
+import { ActionDescriptor } from './ActionDescriptor';
 
-function getRoutes(path: string) {
+function getRouteTokens(path: string) {
     var pathArr = path.split('/')
     var arr: string[] = [];
     pathArr.forEach(element => {
@@ -32,12 +34,82 @@ function find(controllers: any) {
     }
 }
 
-export default function (app: core.Express, controllers: any) {
+export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction) {
+    var desc: ActionDescriptor = res.locals.actionDescriptor
+    if (desc) {
+        var cname = desc.ControllerName
+        new Promise((reslove, reject) => {
+            var cType = desc.ControllerType;
+            var c = new cType(req, res);
+            var actionResult = desc.ActionType.call(c);
+            return reslove(actionResult)
+        }).then(actionResult => {
+            if (actionResult instanceof ViewResult) {
+
+                Promise.resolve(actionResult.data).then(ViewActionResultData => {
+                    res.render(cname + '/' + actionResult.name, ViewActionResultData, (err, html) => {
+                        if (err) {
+                            next(err);
+                        } else {
+                            res.send(html)
+                            res.end();
+                        }
+                    });
+                }).catch(function (viewDataError) {
+                    next(viewDataError);
+                });
+            } else if (typeof actionResult !== 'undefined') {
+                //process object send response json
+                res.send(actionResult)
+                res.end()
+            } else {
+                //process not response or origin response.render or response.send.
+                process.nextTick((_res: any) => {
+                    if (!_res.finished) {
+                        _res.end();
+                    }
+                }, res)
+            }
+        }).catch(processRequestError => {
+            next(processRequestError);
+        })
+        // Promise.resolve(actionResult).then(promiseActionResult => {
+        //     //is view
+        //     if (promiseActionResult instanceof ViewResult) {
+        //         Promise.resolve(promiseActionResult.data).then(promiseViewActionResultData => {
+        //             return new Promise((resolve, reject) => {
+        //                 res.render(cname + '/' + promiseActionResult.name, promiseViewActionResultData, (err, html) => {
+        //                     if (err) reject(err)
+        //                     else resolve()
+        //                 })
+        //             });
+        //         }).catch(viewDataError => {
+        //             res.render('error', viewDataError)
+        //         })
+        //     } else if (typeof promiseActionResult !== 'undefined') {
+        //         res.send(promiseActionResult)
+        //         res.end()
+        //     } else {
+        //         process.nextTick((_res: any) => {
+        //             if (!_res.finished) {
+        //                 _res.end();
+        //             }
+        //         }, res)
+        //     }
+        // }).catch(error => {
+        //     res.send('error')
+        // })
+    } else {
+        next && next();
+    }
+}
+
+export function RouteHandler(app: core.Express, controllers: any) {
 
     find(controllers)
 
     app.use('/', (req, res, next) => {
-        var pathArr = getRoutes(req.path)
+        var pathArr = getRouteTokens(req.path)
 
         var controller = (pathArr[0] && pathArr[0].toLowerCase()) || 'home';
         var action = (pathArr[1] && pathArr[1].toLowerCase()) || 'index'
@@ -49,35 +121,9 @@ export default function (app: core.Express, controllers: any) {
 
             res.locals.authInfo = { isAuth: desc.isAuth };
             res.locals.actionDescriptor = desc;
-
-            var cType = desc.ControllerType;
-            var c = new cType(req, res);
-            var actionResult = desc.ActionType.call(c);
-            var cname = desc.ControllerName
-            //in view
-
-            if (actionResult instanceof ViewResult) {
-                Promise.resolve(actionResult.data).then(p => {
-                    res.render(cname + '/' + actionResult.name, p)
-                })
-                return;
-            }
-            //in not view
-            Promise.resolve(actionResult).then(promiseActionResult => {
-                if (promiseActionResult instanceof ViewResult) {
-                    Promise.resolve(promiseActionResult.data).then(promiseActionResultData => {
-                        res.render(cname + '/' + promiseActionResult.name, promiseActionResultData)
-                    })
-                } else if (typeof promiseActionResult !== 'undefined') {
-                    res.send(promiseActionResult)
-                    res.end()
-                }
-            }).catch(error => {
-                res.send('error')
-            })
-        } else {
-            next && next()
+            var _req: any = req;
+            _req.UserInfo = new UserInfo();
         }
-        // new Controllers.Order(req, res).Index()
+        next && next()
     })
 }
