@@ -109,6 +109,16 @@ export function RouteHandler(app: core.Express, controllers: any) {
     find(controllers)
 
     app.use('/', (req, res, next) => {
+        var ua=req.header('user-agent');
+        var clientVersionInfo:any={};
+        clientVersionInfo.isWechat = /MicroMessenger/i.test(ua);
+        clientVersionInfo.isAndroid = /Android|Linux/i.test(ua);
+        clientVersionInfo.isIos = /\(i[^;]+;( U;)? CPU.+Mac OS X/i.test(ua);
+        clientVersionInfo.appVersion = ua.match(/appVersion\/[0-9]\.[0-9]\.[0-9]/);
+        clientVersionInfo.appVersion = clientVersionInfo.appVersion && clientVersionInfo.appVersion.length ? clientVersionInfo.appVersion[0] : 0;
+        var _req:any=req;
+        _req.clientVersionInfo=clientVersionInfo;
+
         var pathArr = getRouteTokens(req.path)
 
         var controller = (pathArr[0] && pathArr[0].toLowerCase()) || 'home';
@@ -121,8 +131,6 @@ export function RouteHandler(app: core.Express, controllers: any) {
 
             res.locals.authInfo = { isAuth: desc.isAuth };
             res.locals.actionDescriptor = desc;
-            var _req: any = req;
-            _req.UserInfo = new UserInfo();
         }
         next && next()
     })
