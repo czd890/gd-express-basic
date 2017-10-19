@@ -5,13 +5,14 @@ import { GetActionDescriptor, SetActionDescriptor } from './RouteFactory';
 import { ActionDescriptor } from './ActionDescriptor';
 
 function getRouteTokens(path: string) {
-    var pathArr = path.split('/')
+    var pathArr = path.split('/');
     var arr: string[] = [];
     pathArr.forEach(element => {
         if (element) arr.push(element)
     });
     return arr
 }
+
 function find(controllers: any) {
     // console.log('finding all controllers and actions')
     var _reg_controller_names = Object.getOwnPropertyNames(controllers)
@@ -35,9 +36,9 @@ function find(controllers: any) {
 }
 
 export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction) {
-    var desc: ActionDescriptor = res.locals.actionDescriptor
+    var desc: ActionDescriptor = res.locals.actionDescriptor;
     if (desc) {
-        var cname = desc.ControllerName
+        var cname = desc.ControllerName;
         new Promise((reslove, reject) => {
             var cType = desc.ControllerType;
             var c = new cType(req, res);
@@ -51,7 +52,7 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
                         if (err) {
                             next(err);
                         } else {
-                            res.send(html)
+                            res.send(html);
                             res.end();
                         }
                     });
@@ -60,7 +61,7 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
                 });
             } else if (typeof actionResult !== 'undefined') {
                 //process object send response json
-                res.send(actionResult)
+                res.send(actionResult);
                 res.end()
             } else {
                 //process not response or origin response.render or response.send.
@@ -109,15 +110,15 @@ export function RouteHandler(app: core.Express, controllers: any) {
     find(controllers)
 
     app.use('/', (req, res, next) => {
-        var ua=req.header('user-agent');
-        var clientVersionInfo:any={};
+        var ua = req.header('user-agent') || '';
+        var clientVersionInfo: any = {};
         clientVersionInfo.isWechat = /MicroMessenger/i.test(ua);
         clientVersionInfo.isAndroid = /Android|Linux/i.test(ua);
         clientVersionInfo.isIos = /\(i[^;]+;( U;)? CPU.+Mac OS X/i.test(ua);
         clientVersionInfo.appVersion = ua.match(/appVersion\/[0-9]\.[0-9]\.[0-9]/);
         clientVersionInfo.appVersion = clientVersionInfo.appVersion && clientVersionInfo.appVersion.length ? clientVersionInfo.appVersion[0] : 0;
-        var _req:any=req;
-        _req.clientVersionInfo=clientVersionInfo;
+        var _req: any = req;
+        _req.clientVersionInfo = clientVersionInfo;
 
         var pathArr = getRouteTokens(req.path)
 
