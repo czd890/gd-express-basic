@@ -61,7 +61,8 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
                 });
             } else if (typeof actionResult !== 'undefined') {
                 //process object send response json
-                res.send(actionResult);
+                let resultData = req.query['callback'] ? req.query['callback']+'('+JSON.stringify(actionResult)+')' : actionResult;
+                res.send(resultData);
                 res.end()
             } else {
                 //process not response or origin response.render or response.send.
