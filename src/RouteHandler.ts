@@ -35,13 +35,8 @@ function find(controllers: any) {
     }
 }
 
-<<<<<<< HEAD
 export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction | undefined) {
     var desc: ActionDescriptor = res.locals.actionDescriptor
-=======
-export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction) {
-    var desc: ActionDescriptor = res.locals.actionDescriptor;
->>>>>>> a7b9acb306dae325765eef7d377c18edec60e8b2
     if (desc) {
         var cname = desc.ControllerName;
         new Promise((reslove, reject) => {
@@ -116,11 +111,7 @@ export function RouteHandler(app: core.Express, controllers: any) {
     find(controllers)
 
     app.use('/', (req, res, next) => {
-<<<<<<< HEAD
-        var ua = req.header('user-agent');
-=======
         var ua = req.header('user-agent') || '';
->>>>>>> a7b9acb306dae325765eef7d377c18edec60e8b2
         var clientVersionInfo: any = {};
         clientVersionInfo.isWechat = /MicroMessenger/i.test(ua);
         clientVersionInfo.isAndroid = /Android|Linux/i.test(ua);
