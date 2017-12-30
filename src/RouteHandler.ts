@@ -18,7 +18,7 @@ function find(controllers: any) {
     for (var index = 0; index < _reg_controller_names.length; index++) {
         var _reg_controller_name = _reg_controller_names[index];
         // console.log('finded controller:' + _reg_controller_name)
-        var _reg_controller_Desc = Object.getOwnPropertyDescriptor(controllers, _reg_controller_name)
+        var _reg_controller_Desc = Object.getOwnPropertyDescriptor(controllers, _reg_controller_name) as PropertyDescriptor
         if (_reg_controller_name === '__esModule') continue;
 
         var cType = _reg_controller_Desc.value;
@@ -28,13 +28,13 @@ function find(controllers: any) {
         for (var index2 = 0; index2 < aNames.length; index2++) {
             var aName = aNames[index2];
             if (aName === 'constructor') continue;
-            var aType = Object.getOwnPropertyDescriptor(cType.prototype, aName).value
+            var aType = (Object.getOwnPropertyDescriptor(cType.prototype, aName) as PropertyDescriptor).value
             SetActionDescriptor(cName, aName, undefined, undefined, _reg_controller_name, cType, aType)
         }
     }
 }
 
-export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction) {
+export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction | undefined) {
     var desc: ActionDescriptor = res.locals.actionDescriptor
     if (desc) {
         var cname = desc.ControllerName
@@ -49,14 +49,14 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
                 Promise.resolve(actionResult.data).then(ViewActionResultData => {
                     res.render(cname + '/' + actionResult.name, ViewActionResultData, (err, html) => {
                         if (err) {
-                            next(err);
+                            next && next(err);
                         } else {
                             res.send(html)
                             res.end();
                         }
                     });
                 }).catch(function (viewDataError) {
-                    next(viewDataError);
+                    next && next(viewDataError);
                 });
             } else if (typeof actionResult !== 'undefined') {
                 //process object send response json
@@ -71,7 +71,7 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
                 }, res)
             }
         }).catch(processRequestError => {
-            next(processRequestError);
+            next && next(processRequestError);
         })
         // Promise.resolve(actionResult).then(promiseActionResult => {
         //     //is view
@@ -109,15 +109,15 @@ export function RouteHandler(app: core.Express, controllers: any) {
     find(controllers)
 
     app.use('/', (req, res, next) => {
-        var ua=req.header('user-agent');
-        var clientVersionInfo:any={};
+        var ua = req.header('user-agent');
+        var clientVersionInfo: any = {};
         clientVersionInfo.isWechat = /MicroMessenger/i.test(ua);
         clientVersionInfo.isAndroid = /Android|Linux/i.test(ua);
         clientVersionInfo.isIos = /\(i[^;]+;( U;)? CPU.+Mac OS X/i.test(ua);
         clientVersionInfo.appVersion = ua.match(/appVersion\/[0-9]\.[0-9]\.[0-9]/);
         clientVersionInfo.appVersion = clientVersionInfo.appVersion && clientVersionInfo.appVersion.length ? clientVersionInfo.appVersion[0] : 0;
-        var _req:any=req;
-        _req.clientVersionInfo=clientVersionInfo;
+        var _req: any = req;
+        _req.clientVersionInfo = clientVersionInfo;
 
         var pathArr = getRouteTokens(req.path)
 
