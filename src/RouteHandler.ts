@@ -5,13 +5,14 @@ import { GetActionDescriptor, SetActionDescriptor } from './RouteFactory';
 import { ActionDescriptor } from './ActionDescriptor';
 
 function getRouteTokens(path: string) {
-    var pathArr = path.split('/')
+    var pathArr = path.split('/');
     var arr: string[] = [];
     pathArr.forEach(element => {
         if (element) arr.push(element)
     });
     return arr
 }
+
 function find(controllers: any) {
     // console.log('finding all controllers and actions')
     var _reg_controller_names = Object.getOwnPropertyNames(controllers)
@@ -34,10 +35,15 @@ function find(controllers: any) {
     }
 }
 
+<<<<<<< HEAD
 export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction | undefined) {
     var desc: ActionDescriptor = res.locals.actionDescriptor
+=======
+export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction) {
+    var desc: ActionDescriptor = res.locals.actionDescriptor;
+>>>>>>> a7b9acb306dae325765eef7d377c18edec60e8b2
     if (desc) {
-        var cname = desc.ControllerName
+        var cname = desc.ControllerName;
         new Promise((reslove, reject) => {
             var cType = desc.ControllerType;
             var c = new cType(req, res);
@@ -51,7 +57,7 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
                         if (err) {
                             next && next(err);
                         } else {
-                            res.send(html)
+                            res.send(html);
                             res.end();
                         }
                     });
@@ -60,7 +66,8 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
                 });
             } else if (typeof actionResult !== 'undefined') {
                 //process object send response json
-                res.send(actionResult)
+                let resultData = req.query['callback'] ? req.query['callback']+'('+JSON.stringify(actionResult)+')' : actionResult;
+                res.send(resultData);
                 res.end()
             } else {
                 //process not response or origin response.render or response.send.
@@ -109,7 +116,11 @@ export function RouteHandler(app: core.Express, controllers: any) {
     find(controllers)
 
     app.use('/', (req, res, next) => {
+<<<<<<< HEAD
         var ua = req.header('user-agent');
+=======
+        var ua = req.header('user-agent') || '';
+>>>>>>> a7b9acb306dae325765eef7d377c18edec60e8b2
         var clientVersionInfo: any = {};
         clientVersionInfo.isWechat = /MicroMessenger/i.test(ua);
         clientVersionInfo.isAndroid = /Android|Linux/i.test(ua);
