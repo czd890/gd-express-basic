@@ -1,6 +1,6 @@
 {
     "name": "gd-express-basic",
-    "version": "2.0.7",
+    "version": "2.0.8",
     "author": "gd",
     "description": "route handler and basecontroller",
     "scripts": {
@@ -16,5 +16,5 @@
     "devDependencies": {
         "@types/express-serve-static-core": "^4.0.53"
     },
-    "files":["bin","src"] 
+    "files": ["bin", "src"]
 }
