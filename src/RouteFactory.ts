@@ -43,7 +43,6 @@ function build() {
  */
 export function SetActionDescriptor(controllerTypeName: string, actionTypeName: string, httpMethod?: string, actionName?: string, controllerName?: string, controllerType?: any, actionType?: any, isAuth?: boolean): ActionDescriptor {
 
-    console.log('----------------------------------', arguments)
     var _actions = _dic_override.get(controllerTypeName)
     if (!_actions) {
         _actions = new Map<string, ActionDescriptor>();
