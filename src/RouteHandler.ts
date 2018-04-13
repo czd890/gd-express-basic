@@ -48,7 +48,8 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
             if (actionResult instanceof ViewResult) {
 
                 Promise.resolve(actionResult.data).then(ViewActionResultData => {
-                    res.render(cname + '/' + actionResult.name, ViewActionResultData, (err, html) => {
+                    var findViewNamePath = actionResult.name[0] === '/' ? actionResult.name.substr(1) : (cname + '/' + actionResult.name)
+                    res.render(findViewNamePath, ViewActionResultData, (err, html) => {
                         if (err) {
                             next && next(err);
                         } else {
@@ -61,7 +62,7 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
                 });
             } else if (typeof actionResult !== 'undefined') {
                 //process object send response json
-                let resultData = req.query['callback'] ? req.query['callback']+'('+JSON.stringify(actionResult)+')' : actionResult;
+                let resultData = req.query['callback'] ? req.query['callback'] + '(' + JSON.stringify(actionResult) + ')' : actionResult;
                 res.send(resultData);
                 res.end()
             } else {
@@ -129,6 +130,9 @@ export function RouteHandler(app: core.Express, controllers: any) {
         // console.log('req route:::', controller, action, req.path, req.method)
 
         var desc = GetActionDescriptor(controller, action, req.method)
+        if (!desc) {
+            desc = GetActionDescriptor(controller, '_default', req.method)
+        }
         if (desc && (!desc.HttpMethod || (desc.HttpMethod && desc.HttpMethod === req.method))) {
 
             res.locals.authInfo = { isAuth: desc.isAuth };

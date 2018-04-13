@@ -1,6 +1,6 @@
 {
     "name": "gd-express-basic",
-    "version": "2.11.1",
+    "version": "2.11.2",
     "author": "gd",
     "description": "route handler and basecontroller",
     "scripts": {
