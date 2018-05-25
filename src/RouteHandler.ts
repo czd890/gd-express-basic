@@ -1,5 +1,7 @@
-import { UserInfo } from './UserInfo';
 import * as core from "express-serve-static-core";
+import "reflect-metadata";
+
+import { UserInfo } from './UserInfo';
 import { ViewResult } from './ViewResult';
 import { GetActionDescriptor, SetActionDescriptor } from './RouteFactory';
 import { ActionDescriptor } from './ActionDescriptor';
@@ -35,78 +37,68 @@ function find(controllers: any) {
     }
 }
 
+/**
+ * 请求处理中间件
+ * 
+ * @export
+ * @param {core.Request} req 
+ * @param {core.Response} res 
+ * @param {(core.NextFunction | undefined)} next 
+ */
 export function RequestHandler(req: core.Request, res: core.Response, next: core.NextFunction | undefined) {
     var desc: ActionDescriptor = res.locals.actionDescriptor
-    if (desc) {
-        var cname = desc.ControllerName;
-        new Promise((reslove, reject) => {
-            var cType = desc.ControllerType;
-            var c = new cType(req, res);
-            var actionResult = desc.ActionType.call(c);
-            return reslove(actionResult)
-        }).then(actionResult => {
-            if (actionResult instanceof ViewResult) {
-
-                Promise.resolve(actionResult.data).then(ViewActionResultData => {
-                    var findViewNamePath = actionResult.name[0] === '/' ? actionResult.name.substr(1) : (cname + '/' + actionResult.name)
-                    res.render(findViewNamePath, ViewActionResultData, (err, html) => {
-                        if (err) {
-                            next && next(err);
-                        } else {
-                            res.send(html);
-                            res.end();
-                        }
-                    });
-                }).catch(function (viewDataError) {
-                    next && next(viewDataError);
-                });
-            } else if (typeof actionResult !== 'undefined') {
-                //process object send response json
-                let resultData = req.query['callback'] ? req.query['callback'] + '(' + JSON.stringify(actionResult) + ')' : actionResult;
-                res.send(resultData);
-                res.end()
-            } else {
-                //process not response or origin response.render or response.send.
-                process.nextTick((_res: any) => {
-                    if (!_res.finished) {
-                        _res.end();
-                    }
-                }, res)
-            }
-        }).catch(processRequestError => {
-            next && next(processRequestError);
-        })
-        // Promise.resolve(actionResult).then(promiseActionResult => {
-        //     //is view
-        //     if (promiseActionResult instanceof ViewResult) {
-        //         Promise.resolve(promiseActionResult.data).then(promiseViewActionResultData => {
-        //             return new Promise((resolve, reject) => {
-        //                 res.render(cname + '/' + promiseActionResult.name, promiseViewActionResultData, (err, html) => {
-        //                     if (err) reject(err)
-        //                     else resolve()
-        //                 })
-        //             });
-        //         }).catch(viewDataError => {
-        //             res.render('error', viewDataError)
-        //         })
-        //     } else if (typeof promiseActionResult !== 'undefined') {
-        //         res.send(promiseActionResult)
-        //         res.end()
-        //     } else {
-        //         process.nextTick((_res: any) => {
-        //             if (!_res.finished) {
-        //                 _res.end();
-        //             }
-        //         }, res)
-        //     }
-        // }).catch(error => {
-        //     res.send('error')
-        // })
-    } else {
-        next && next();
+    if (!desc) {
+        return next && next();
     }
-}
+    var cname = desc.ControllerName;
+    new Promise((reslove, reject) => {
+        var cType = desc.ControllerType;//*controller class对象
+        var c = new cType(req, res);//new 一个controller 对象出来
+        // var actionResult = desc.ActionType.call(c);//调用action方法，指定this对象为新new出来的controller对象。
+        var agrs = bindActionParameter(desc.ControllerType, desc.ControllerTypeName, desc.ActionType, desc.ActionName, req)
+        var actionResult = desc.ActionType.apply(c, agrs)
+        return reslove(actionResult)
+    }).then(actionResult => {
+        if (actionResult instanceof ViewResult) {
 
+            Promise.resolve(actionResult.data).then(ViewActionResultData => {
+                var findViewNamePath = actionResult.name[0] === '/' ? actionResult.name.substr(1) : (cname + '/' + actionResult.name)
+                res.render(findViewNamePath, ViewActionResultData, (err, html) => {
+                    if (err) {
+                        next && next(err);
+                    } else {
+                        res.send(html);
+                        res.end();
+                    }
+                });
+            }).catch(function (viewDataError) {
+                next && next(viewDataError);
+            });
+        } else if (typeof actionResult !== 'undefined') {
+            //process object send response json
+            let resultData = req.query['callback'] ? req.query['callback'] + '(' + JSON.stringify(actionResult) + ')' : actionResult;
+            res.send(resultData);
+            res.end()
+        } else {
+            //process not response or origin response.render or response.send.
+            process.nextTick((_res: any) => {
+                if (!_res.finished) {
+                    _res.end();
+                }
+            }, res)
+        }
+    }).catch(processRequestError => {
+        next && next(processRequestError);
+    })
+
+}
+/**
+ * 路由选择处理中间件
+ * 
+ * @export
+ * @param {core.Express} app 
+ * @param {*} controllers 
+ */
 export function RouteHandler(app: core.Express, controllers: any) {
 
     find(controllers)
@@ -141,3 +133,166 @@ export function RouteHandler(app: core.Express, controllers: any) {
         next && next()
     })
 }
+
+export declare type parameterFromType = 'query' | 'body' | 'form' | 'header' | 'cookie'
+
+export class ActionParamDescriptor {
+    /**
+     * action参数的action名称
+     * 
+     * @type {string}
+     * @memberof ActionParamDescriptor
+     */
+    actionMethodName: string
+    /**
+     * 参数名称
+     * 
+     * @type {string}
+     * @memberof ActionParamDescriptor
+     */
+    parameterName: string
+    /**
+     * 参数所在类
+     * 
+     * @type {Object}
+     * @memberof ActionParamDescriptor
+     */
+    target: Object
+    /**
+     * 参数类型的类别
+     * 
+     * @type {('complex' | 'simple')}
+     * @memberof ActionParamDescriptor
+     */
+    parameterTypeType: 'complex' | 'simple'
+    /**
+     * 参数对象的类型(class)对象
+     * 
+     * @type {Function}
+     * @memberof ActionParamDescriptor
+     */
+    parameterType: Function
+    /**
+     * 参数所在参数类别的顺序
+     * 
+     * @type {(number | undefined)}
+     * @memberof ActionParamDescriptor
+     */
+    parameterIndex: number | undefined
+
+    /**
+     * 当前参数属性属于什么类型
+     * 
+     * @type {('classProperty'|'methodParameter')}
+     * @memberof ActionParamDescriptor
+     */
+    localtionType: 'classProperty' | 'methodParameter'
+    /**
+     * 标记参数应该从什么地方解析
+     * 
+     * @type {('query' | 'body')}
+     * @memberof ActionParamDescriptor
+     */
+    parameterFromType: parameterFromType
+}
+
+
+const fromQueryMetadataKey = Symbol("fromQuery");
+export function SetActionParamDescriptor(val: ActionParamDescriptor) {
+    (val as any).targetName = val.target.constructor.name
+    if (val.parameterType) (val as any).parameterTypeName = val.parameterType.name
+    console.log('SetActionParamDescriptor', JSON.stringify(val));
+    var arr: ActionParamDescriptor[] = [];
+    if (val.localtionType === 'methodParameter') {
+        arr = Reflect.getMetadata(fromQueryMetadataKey, val.target, val.actionMethodName) || [];
+        arr.push(val);
+        Reflect.defineMetadata(fromQueryMetadataKey, arr, val.target, val.actionMethodName);
+    } else {
+        arr = Reflect.getMetadata(fromQueryMetadataKey, val.target) || [];
+        arr.push(val);
+        Reflect.defineMetadata(fromQueryMetadataKey, arr, val.target);
+    }
+}
+
+
+function bindActionParameter(controllerType: Function, controllerName: string, actionType: Object, actionName: string, req: core.Request) {
+
+    var arr = Reflect.getMetadata(fromQueryMetadataKey, controllerType.prototype, actionName) || [] as ActionParamDescriptor[];
+
+    var args = [arr.length];
+    for (let index = 0; index < arr.length; index++) {
+        args[arr[index].parameterIndex as number] = getParameterValue(req, arr[index])
+    }
+    return args;
+}
+function bindClassParameter(req: core.Request, target: any): any {
+    var arr = Reflect.getMetadata(fromQueryMetadataKey, target.prototype) as ActionParamDescriptor[];
+    var obj = new target();
+    for (let index = 0; index < arr.length; index++) {
+        var desc = arr[index];
+        obj[desc.parameterName] = getParameterValue(req, desc);
+    }
+    return obj;
+}
+function getParameterValue(req: core.Request, desc: ActionParamDescriptor): any {
+
+    if (desc.parameterTypeType === 'simple') {
+        return getparameterInRequest(desc.parameterFromType, desc.parameterName, req);
+    } else if (desc.parameterTypeType === 'complex') {
+        return bindClassParameter(req, desc.parameterType)
+    }
+    else throw Error('not support parameter type ' + desc.parameterTypeType)
+}
+
+function getparameterInRequest(fromType: parameterFromType, parameterName: string, req: core.Request) {
+    switch (fromType) {
+        case 'query':
+            return getCompatibleParam(req.query, parameterName)
+        case 'body':
+            return req.body
+        case 'header':
+            return getCompatibleParam(req.headers, parameterName)
+        case 'cookie':
+            return getCompatibleParam(req.cookies, parameterName)
+        case 'form':
+            return getCompatibleParam(req.body, parameterName)
+    }
+}
+
+function getCompatibleParam(obj: any, propertyName: string) {
+    var lower = propertyName.toLowerCase();
+    for (const key in obj) {
+        if (obj.hasOwnProperty(key) && key.toLowerCase() == lower) {
+            return obj[key];
+        }
+    }
+}
+/**
+ * 
+SetActionParamDescriptor {"propertyName":"demoAction","target":{},"parameterIndex":1,"localtionType":"methodParameter","parameterTypeType":"simple","targetName":"demoController"}
+SetActionParamDescriptor {"propertyName":"demoAction","target":{},"parameterIndex":0,"localtionType":"methodParameter","parameterTypeType":"complex","targetName":"demoController",
+"parameterTypeName":"demoActionParams"}
+
+
+SetActionParamDescriptor {"propertyName":"id","target":{},"parameterTypeType":"complex","localtionType":"classProperty","targetName":"demoActionParams"}
+SetActionParamDescriptor {"propertyName":"name","target":{},"parameterTypeType":"complex","localtionType":"classProperty","targetName":"demoActionParams"}
+SetActionParamDescriptor {"propertyName":"pageSize","target":{},"parameterTypeType":"complex","localtionType":"classProperty","targetName":"demoActionParams"}
+
+@fromQuery()
+export class demoActionParams {
+    @fromQuery()
+    id: string;
+    @fromQuery()
+    name: string;
+    @fromQuery()
+    pageSize: number;
+}
+
+export class demoController extends BaseController {
+    @post()
+    demoAction(@fromQuery(type => demoActionParams) query: demoActionParams, @fromQuery() p2: string) {
+    }
+}
+
+ * 
+ */
