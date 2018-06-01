@@ -40,13 +40,24 @@ export function actionName(actionName: string) {
  * 指示当前参数从request对象的body中解析
  * 
  * @export
- * @param {(target?: any) => Function} type 返回需要绑定的复杂对象的类型，复杂类型对象属性需要由&#64;from**进行标记
  * @returns {Function} 
  */
-export function fromBody(type: (target?: any) => Function): Function {
+export function fromBody(): Function {
     var thatArg = arguments;
     return function (target: Object, propertyKey: string, parameterIndex: number) {
         makeActionParameterDescriptor('body', thatArg, target, propertyKey, parameterIndex);
+    }
+}
+/**
+ * 标记class的属性需要自动参数解析
+ * 
+ * @export
+ * @returns {Function} 
+ */
+export function property(): Function {
+    var thatArg = arguments;
+    return function (target: Object, propertyKey: string, parameterIndex: number) {
+        makeActionParameterDescriptor('auto', thatArg, target, propertyKey, parameterIndex);
     }
 }
 /**

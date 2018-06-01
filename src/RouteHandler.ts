@@ -134,7 +134,7 @@ export function RouteHandler(app: core.Express, controllers: any) {
     })
 }
 
-export declare type parameterFromType = 'query' | 'body' | 'form' | 'header' | 'cookie'
+export declare type parameterFromType = 'query' | 'body' | 'form' | 'header' | 'cookie' | 'auto'
 
 export class ActionParamDescriptor {
     /**
@@ -190,7 +190,7 @@ export class ActionParamDescriptor {
     /**
      * 标记参数应该从什么地方解析
      * 
-     * @type {('query' | 'body')}
+     * @type {parameterFromType}
      * @memberof ActionParamDescriptor
      */
     parameterFromType: parameterFromType
@@ -221,30 +221,30 @@ function bindActionParameter(controllerType: Function, controllerName: string, a
 
     var args = [arr.length];
     for (let index = 0; index < arr.length; index++) {
-        args[arr[index].parameterIndex as number] = getParameterValue(req, arr[index])
+        args[arr[index].parameterIndex as number] = getParameterValue(req, arr[index], arr[index])
     }
     return args;
 }
-function bindClassParameter(req: core.Request, target: any): any {
+function bindClassParameter(req: core.Request, target: any, methodParmeterdesc: ActionParamDescriptor): any {
     var arr = Reflect.getMetadata(fromQueryMetadataKey, target.prototype) as ActionParamDescriptor[];
     var obj = new target();
     for (let index = 0; index < arr.length; index++) {
         var desc = arr[index];
-        obj[desc.parameterName] = getParameterValue(req, desc);
+        obj[desc.parameterName] = getParameterValue(req, desc, methodParmeterdesc);
     }
     return obj;
 }
-function getParameterValue(req: core.Request, desc: ActionParamDescriptor): any {
+function getParameterValue(req: core.Request, desc: ActionParamDescriptor, methodParmeterdesc: ActionParamDescriptor): any {
 
-    if (desc.parameterTypeType === 'simple') {
-        return getparameterInRequest(desc.parameterFromType, desc.parameterName, req);
+    if (desc.parameterTypeType === 'simple' || (desc.localtionType === 'methodParameter' && desc.parameterFromType === 'body')) {
+        return getparameterInRequest(desc.parameterFromType, desc.parameterName, req, methodParmeterdesc);
     } else if (desc.parameterTypeType === 'complex') {
-        return bindClassParameter(req, desc.parameterType)
+        return bindClassParameter(req, desc.parameterType, methodParmeterdesc)
     }
     else throw Error('not support parameter type ' + desc.parameterTypeType)
 }
 
-function getparameterInRequest(fromType: parameterFromType, parameterName: string, req: core.Request) {
+function getparameterInRequest(fromType: parameterFromType, parameterName: string, req: core.Request, methodParmeterdesc: ActionParamDescriptor): any {
     switch (fromType) {
         case 'query':
             return getCompatibleParam(req.query, parameterName)
@@ -256,7 +256,10 @@ function getparameterInRequest(fromType: parameterFromType, parameterName: strin
             return getCompatibleParam(req.cookies, parameterName)
         case 'form':
             return getCompatibleParam(req.body, parameterName)
+        case 'auto':
+            return getparameterInRequest(methodParmeterdesc.parameterFromType, parameterName, req, methodParmeterdesc);
     }
+    return undefined;
 }
 
 function getCompatibleParam(obj: any, propertyName: string) {

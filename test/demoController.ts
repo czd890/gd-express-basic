@@ -1,21 +1,40 @@
-import { BaseController, post, fromQuery, fromBody } from "../src/index"
+import { BaseController, post, fromQuery, fromBody, fromCookie, fromHeader, property } from "../src/index"
 
 
-@fromQuery()
-export class demoActionParams {
-    @fromQuery()
+export class demoActionBodyParams {
     id: string;
-    @fromQuery()
     name: string;
-    @fromQuery()
     pageSize: number;
+    body: {
+        req_bb: string
+    }
+}
+
+
+export class demoActionQueryParams {
+    @property()
+    id: string;
+    @property()
+    name: string;
+    @property()
+    pageSize: number;
+    @fromCookie()
+    cookieName: string;
+    @fromHeader()
+    headerName: string;
+    @fromBody()
+    body: any;
 }
 
 export class demoController extends BaseController {
     @post()
-    demoAction(@fromBody(type => demoActionParams) query: demoActionParams, @fromQuery() p2: string) {
+    demoAction(@fromQuery(type => demoActionQueryParams) query: demoActionQueryParams,
+        @fromQuery() p2: string,
+        @fromBody() req_body: demoActionBodyParams) {
+
         // this.response.send({ "aa": "b" });
-        console.log(query, p2, '--------demoAction proccess')
+        // console.log(query, p2, '--------demoAction proccess')
+        return { query, p2, req_body }
     }
 
     @post()
