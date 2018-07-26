@@ -2,7 +2,7 @@ import * as core from "express-serve-static-core";
 import "reflect-metadata";
 
 import { UserInfo } from './UserInfo';
-import { ViewResult } from './ViewResult';
+import { ViewResult, JsonResult } from './ViewResult';
 import { GetActionDescriptor, SetActionDescriptor } from './RouteFactory';
 import { ActionDescriptor } from './ActionDescriptor';
 
@@ -60,9 +60,9 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
         return reslove(actionResult)
     }).then(actionResult => {
         if (actionResult instanceof ViewResult) {
-
+            var viewName = actionResult.name;
             Promise.resolve(actionResult.data).then(ViewActionResultData => {
-                var findViewNamePath = actionResult.name[0] === '/' ? actionResult.name.substr(1) : (cname + '/' + actionResult.name)
+                var findViewNamePath = viewName[0] === '/' ? viewName.substr(1) : (cname + '/' + viewName)
                 res.render(findViewNamePath, ViewActionResultData, (err, html) => {
                     if (err) {
                         next && next(err);
@@ -76,7 +76,11 @@ export function RequestHandler(req: core.Request, res: core.Response, next: core
             });
         } else if (typeof actionResult !== 'undefined') {
             //process object send response json
-            let resultData = req.query['callback'] ? req.query['callback'] + '(' + JSON.stringify(actionResult) + ')' : actionResult;
+            if (actionResult instanceof JsonResult)
+                actionResult = actionResult.data as any;
+
+            var jsonCallBack = getCompatibleParam(req.query, 'callback') || getCompatibleParam(req.query, 'jsoncallback');
+            let resultData = jsonCallBack ? jsonCallBack + '(' + JSON.stringify(actionResult) + ')' : actionResult;
             res.send(resultData);
             res.end()
         } else {
@@ -118,8 +122,6 @@ export function RouteHandler(app: core.Express, controllers: any) {
 
         var controller = (pathArr[0] && pathArr[0].toLowerCase()) || 'home';
         var action = (pathArr[1] && pathArr[1].toLowerCase()) || 'index'
-
-        // console.log('req route:::', controller, action, req.path, req.method)
 
         var desc = GetActionDescriptor(controller, action, req.method)
         if (!desc) {
@@ -198,6 +200,13 @@ export class ActionParamDescriptor {
 
 
 const fromQueryMetadataKey = Symbol("fromQuery");
+
+/**
+ *设置请求处理函数的参数描述配置对象
+ *
+ * @export
+ * @param {ActionParamDescriptor} val
+ */
 export function SetActionParamDescriptor(val: ActionParamDescriptor) {
     (val as any).targetName = val.target.constructor.name
     if (val.parameterType) (val as any).parameterTypeName = val.parameterType.name
@@ -270,32 +279,3 @@ function getCompatibleParam(obj: any, propertyName: string) {
         }
     }
 }
-/**
- * 
-SetActionParamDescriptor {"propertyName":"demoAction","target":{},"parameterIndex":1,"localtionType":"methodParameter","parameterTypeType":"simple","targetName":"demoController"}
-SetActionParamDescriptor {"propertyName":"demoAction","target":{},"parameterIndex":0,"localtionType":"methodParameter","parameterTypeType":"complex","targetName":"demoController",
-"parameterTypeName":"demoActionParams"}
-
-
-SetActionParamDescriptor {"propertyName":"id","target":{},"parameterTypeType":"complex","localtionType":"classProperty","targetName":"demoActionParams"}
-SetActionParamDescriptor {"propertyName":"name","target":{},"parameterTypeType":"complex","localtionType":"classProperty","targetName":"demoActionParams"}
-SetActionParamDescriptor {"propertyName":"pageSize","target":{},"parameterTypeType":"complex","localtionType":"classProperty","targetName":"demoActionParams"}
-
-@fromQuery()
-export class demoActionParams {
-    @fromQuery()
-    id: string;
-    @fromQuery()
-    name: string;
-    @fromQuery()
-    pageSize: number;
-}
-
-export class demoController extends BaseController {
-    @post()
-    demoAction(@fromQuery(type => demoActionParams) query: demoActionParams, @fromQuery() p2: string) {
-    }
-}
-
- * 
- */

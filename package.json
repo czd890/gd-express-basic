@@ -1,8 +1,8 @@
 {
     "name": "gd-express-basic",
-    "version": "2.4.0",
-    "author": "gd",
-    "description": "route handler and basecontroller",
+    "version": "3.0.1",
+    "author": "gd-czd890",
+    "description": "nodejs express mvc extensions. auto route mapping、controller、action、auto bind params、auto format result",
     "scripts": {
         "node-install": "npm install",
         "complie": "tsc -W false",

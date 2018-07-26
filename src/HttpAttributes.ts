@@ -1,7 +1,6 @@
 
 import { SetActionDescriptor } from './RouteFactory';
 import { ActionParamDescriptor, SetActionParamDescriptor, parameterFromType } from './RouteHandler';
-import { ClientRequestArgs } from 'http';
 /**
  * 标记当前方法只接受post请求
  * 

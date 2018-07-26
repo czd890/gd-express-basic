@@ -2,6 +2,15 @@ import { ActionDescriptor } from './ActionDescriptor';
 
 
 
+/**
+ *获得当前请求匹配的请求处理函数描述对象
+ *
+ * @export
+ * @param {string} controllerName 路由中的controller name
+ * @param {string} actionName 路由中的 action name
+ * @param {string} [method] 请求的 httpmethod
+ * @returns {(ActionDescriptor | undefined)}
+ */
 export function GetActionDescriptor(controllerName: string, actionName: string, method?: string): ActionDescriptor | undefined {
     if (!_dic_buid_routes) build();
 

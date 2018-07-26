@@ -31,7 +31,6 @@ export class demoController extends BaseController {
     demoAction(@fromQuery(type => demoActionQueryParams) query: demoActionQueryParams,
         @fromQuery() p2: string,
         @fromBody() req_body: demoActionBodyParams) {
-
         // this.response.send({ "aa": "b" });
         // console.log(query, p2, '--------demoAction proccess')
         return { query, p2, req_body }
